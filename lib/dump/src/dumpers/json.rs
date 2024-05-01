@@ -1,7 +1,7 @@
 
 use serde_json as json;
 
-use crate::dump::{Dumper, DumperResult};
+use crate::{Dumper, DumperResult, Dumpable};
 
 pub struct JSONDumper {
     finished: bool,
@@ -43,7 +43,7 @@ impl JSONDumper {
     }
 }
 
-fn value_array(val: &mut dyn Iterator<Item=&dyn crate::dump::Dumpable>) -> Vec<json::Value> {
+fn value_array(val: &mut dyn Iterator<Item=&dyn Dumpable>) -> Vec<json::Value> {
     val.filter_map(|item| {
         let mut inner = JSONDumper::new();
         item.dump(&mut inner);
@@ -92,7 +92,7 @@ impl Dumper for JSONDumper {
         self.set(json::Value::String(String::from(val)));
     }
 
-    fn dump_arr(self: &mut Self, val: &mut dyn Iterator<Item=&dyn crate::dump::Dumpable>) {
+    fn dump_arr(self: &mut Self, val: &mut dyn Iterator<Item=&dyn Dumpable>) {
         self.set(json::Value::Array(value_array(val)));
     }
 
@@ -118,7 +118,7 @@ impl Dumper for JSONDumper {
         self.set_parameter(name, json::Value::String(String::from(val)));
     }
 
-    fn dump_arr_as_parameter(self: &mut Self, name: &str, val: &mut dyn Iterator<Item=&dyn crate::dump::Dumpable>) {
+    fn dump_arr_as_parameter(self: &mut Self, name: &str, val: &mut dyn Iterator<Item=&dyn Dumpable>) {
         let mut inner = Self::new();
         inner.dump_arr(val);
         inner.finish();
@@ -132,7 +132,7 @@ impl Dumper for JSONDumper {
         self.set_parameter(name, json::Value::Bool(val));
     }
 
-    fn dump_fold_as_parameter(self: &mut Self, name: &str, val: &dyn crate::dump::Dumpable) {
+    fn dump_fold_as_parameter(self: &mut Self, name: &str, val: &dyn Dumpable) {
         let mut inner = Self::new();
         val.dump(&mut inner);
         inner.finish();

@@ -2,7 +2,7 @@
 pub mod parameter;
 
 use parameter::{Parameter, Value};
-use local_registry::dump::{Dumpable, Dumper};
+use dump::{Dumpable, Dumper};
 
 pub struct Mode {
     provider: String,

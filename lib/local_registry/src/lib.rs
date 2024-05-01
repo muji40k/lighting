@@ -1,4 +1,6 @@
 
-pub mod dump;
-pub mod json_dump;
+trait Registry {
+    fn name(self: &Self) -> &str;
+    // fn list
+}
 

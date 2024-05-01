@@ -1,5 +1,5 @@
 
-use local_registry::dump::{Dumper, Dumpable};
+use dump::{Dumper, Dumpable};
 use crate::color::Color;
 use crate::mode::Mode;
 

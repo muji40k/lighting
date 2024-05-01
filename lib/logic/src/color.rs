@@ -1,5 +1,5 @@
 
-use local_registry::dump::{Dumper, Dumpable};
+use dump::{Dumper, Dumpable};
 
 pub mod rgb;
 pub mod temperature;

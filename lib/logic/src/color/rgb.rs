@@ -29,13 +29,13 @@ impl RGBColor {
 }
 
 impl Dumpable for RGBColor {
-    fn dump(self: &Self, dumper: &mut dyn local_registry::dump::Dumper) {
+    fn dump(self: &Self, dumper: &mut dyn dump::Dumper) {
         self.red.dump_as_parameter(dumper, "red");
         self.green.dump_as_parameter(dumper, "green");
         self.blue.dump_as_parameter(dumper, "blue");
     }
 
-    fn dump_as_parameter(self: &Self, dumper: &mut dyn local_registry::dump::Dumper, name: &str) {
+    fn dump_as_parameter(self: &Self, dumper: &mut dyn dump::Dumper, name: &str) {
         dumper.dump_fold_as_parameter(name, self);
     }
 }

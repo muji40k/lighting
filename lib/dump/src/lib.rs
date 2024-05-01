@@ -1,6 +1,8 @@
 
 use std::collections::HashMap;
 
+pub mod dumpers;
+
 pub trait Dumpable {
     fn dump(self: &Self, dumper: &mut dyn Dumper);
     fn dump_as_parameter(self: &Self, dumper: &mut dyn Dumper, name: &str);

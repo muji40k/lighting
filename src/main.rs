@@ -1,6 +1,6 @@
 
-use local_registry::dump::{Dumpable, Dumper, DumperResult};
-use local_registry::json_dump::JSONDumper;
+use dump::{Dumpable, Dumper, DumperResult};
+use dump::dumpers::json::JSONDumper;
 
 fn dump(object: &dyn Dumpable) -> String {
     let mut dumper = JSONDumper::new();

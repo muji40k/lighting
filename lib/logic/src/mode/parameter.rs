@@ -1,7 +1,7 @@
 
 use std::collections::HashMap;
 
-use local_registry::dump::{Dumpable, Dumper};
+use dump::{Dumpable, Dumper};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Parameter {
