@@ -29,12 +29,12 @@ impl std::fmt::Display for Error {
     fn fmt(self: &Self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Self::Incapable(name, provider, capability) => {
-                write!(f, "Light {} ({}[{}]): incapable for \"{}\"", name,
-                       provider.id(), provider.provider(), capability)
+                write!(f, "Light \"{}\" ({}): incapable for \"{}\"",
+                       name, provider, capability)
             },
             Self::Unset(name, provider, capability) => {
-                write!(f, "Light {} ({}[{}]): value for \"{}\" unset", name,
-                       provider.id(), provider.provider(), capability)
+                write!(f, "Light \"{}\" ({}): value for \"{}\" unset",
+                       name, provider, capability)
             },
         }
     }
@@ -63,6 +63,12 @@ impl ProviderID {
     }
 }
 
+impl std::fmt::Display for ProviderID {
+    fn fmt(self: &Self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}@{}", self.id, self.name)
+    }
+}
+
 #[derive(Debug)]
 pub enum Capability {
     Color,
@@ -70,21 +76,41 @@ pub enum Capability {
     Mode,
 }
 
-pub enum State {
+enum State {
     Color(Option<Box<dyn Color>>),
     Brightness(Option<Brightness>),
     Mode(Option<Mode>),
 }
 
+impl From<&Capability> for State {
+    fn from(value: &Capability) -> Self {
+        match value {
+            Capability::Color => Self::Color(None),
+            Capability::Brightness => Self::Brightness(None),
+            Capability::Mode => Self::Mode(None),
+        }
+    }
+}
+
+impl<'a> FromIterator<&'a Capability> for Vec<State> {
+    fn from_iter<T: IntoIterator<Item = &'a Capability>>(iter: T) -> Self {
+        let mut out = Self::new();
+
+        for item in iter {
+            out.push(item.into());
+        }
+
+        out
+    }
+}
+
 impl std::fmt::Display for Capability {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let msg = match self {
-            Capability::Color => "color",
-            Capability::Brightness => "brightness",
-            Capability::Mode => "mode",
-        };
-
-        write!(f, "{}", msg)
+        match self {
+            Capability::Color => write!(f, "Color"),
+            Capability::Brightness => write!(f, "Brightness"),
+            Capability::Mode => write!(f, "Mode"),
+        }
     }
 }
 
@@ -93,42 +119,29 @@ pub type Brightness = f64;
 pub struct Light {
     provider: ProviderID,
     name: String,
-
     power: bool,
     state: Vec<State>,
 }
 
 impl Light {
-    fn capability_to_state(capabilities: Vec<Capability>) -> Vec<State> {
-        capabilities.iter().map(|item| {
-            match item {
-                Capability::Color => State::Color(None),
-                Capability::Brightness => State::Brightness(None),
-                Capability::Mode => State::Mode(None),
-            }
-        }).collect()
-    }
-
-    pub fn new(provider: String, provider_id: String, capabilities: Vec<Capability>) -> Self {
+    pub fn new(provider: String, provider_id: String,
+               capabilities: Vec<Capability>) -> Self {
         Self {
             provider: ProviderID::new(provider, provider_id),
             name: String::new(),
-            // capabilities,
             power: false,
-            // state: None,
-            state: Light::capability_to_state(capabilities),
+            state: Vec::from_iter(capabilities.iter()),
         }
     }
 
-    pub fn named(provider: String, provider_id: String, capabilities: Vec<Capability>,
-             name: String) -> Self {
+    pub fn named(provider: String, provider_id: String,
+                 capabilities: Vec<Capability>,
+                 name: String) -> Self {
         Self {
             provider: ProviderID::new(provider, provider_id),
             name,
-            // capabilities,
             power: false,
-            // state: None,
-            state: Light::capability_to_state(capabilities),
+            state: Vec::from_iter(capabilities.iter()),
         }
     }
 
@@ -265,20 +278,6 @@ impl Dumpable for ProviderID {
     fn dump(self: &Self, dumper: &mut dyn Dumper) {
         self.name.dump_as_parameter(dumper, "name");
         self.id.dump_as_parameter(dumper, "id");
-    }
-
-    fn dump_as_parameter(self: &Self, dumper: &mut dyn Dumper, name: &str) {
-        dumper.dump_fold_as_parameter(name, self);
-    }
-}
-
-impl Dumpable for Capability {
-    fn dump(self: &Self, dumper: &mut dyn Dumper) {
-        match self {
-            Self::Color => "color",
-            Self::Brightness => "brightness",
-            Self::Mode => "mode",
-        }.dump(dumper);
     }
 
     fn dump_as_parameter(self: &Self, dumper: &mut dyn Dumper, name: &str) {
