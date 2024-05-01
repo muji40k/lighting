@@ -1,5 +1,5 @@
 
-use local_registry::dump::Dumpable;
+use local_registry::dump::{Dumper, Dumpable};
 
 pub mod rgb;
 pub mod temperature;
@@ -26,4 +26,14 @@ pub trait InnerColor {
 
 pub trait Color: InnerColor + Dumpable {}
 impl<T> Color for T where T: InnerColor + Dumpable {}
+
+impl Dumpable for Box<dyn Color> {
+    fn dump(self: &Self, dumper: &mut dyn Dumper) {
+        self.as_ref().dump(dumper)
+    }
+
+    fn dump_as_parameter(self: &Self, dumper: &mut dyn Dumper, name: &str) {
+        self.as_ref().dump_as_parameter(dumper, name)
+    }
+}
 

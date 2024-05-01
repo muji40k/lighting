@@ -15,6 +15,7 @@ pub trait Dumper {
     fn dump_str(self: &mut Self, val: &str);
     fn dump_arr(self: &mut Self, val: &mut dyn Iterator<Item=&dyn Dumpable>);
     fn dump_bool(self: &mut Self, val: bool);
+    fn dump_none_as_parameter(self: &mut Self, name: &str);
     fn dump_u64_as_parameter(self: &mut Self, name: &str, val: u64);
     fn dump_i64_as_parameter(self: &mut Self, name: &str, val: i64);
     fn dump_f64_as_parameter(self: &mut Self, name: &str, val: f64);
@@ -246,4 +247,13 @@ impl<T: Dumpable> Dumpable for Option<T> {
     }
 }
 
+impl<T: Dumpable> Dumpable for Box<T> {
+    fn dump(self: &Self, dumper: &mut dyn Dumper) {
+        self.as_ref().dump(dumper)
+    }
+
+    fn dump_as_parameter(self: &Self, dumper: &mut dyn Dumper, name: &str) {
+        dumper.dump_fold_as_parameter(name, self.as_ref());
+    }
+}
 

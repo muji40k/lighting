@@ -141,5 +141,13 @@ impl Dumper for JSONDumper {
                            inner.result()
                            .expect("Finished dump so error shouldn't occur"));
     }
+
+    fn dump_none(self: &mut Self) {
+        self.set(json::Value::Null)
+    }
+
+    fn dump_none_as_parameter(self: &mut Self, name: &str) {
+        self.set_parameter(name, json::Value::Null)
+    }
 }
 
