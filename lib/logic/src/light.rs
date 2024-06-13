@@ -1,5 +1,6 @@
 
-use dump::{Dumper, Dumpable};
+use serde::{Serialize, Deserialize};
+
 use crate::color::Color;
 use crate::mode::Mode;
 
@@ -9,20 +10,28 @@ type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     Incapable(String, ProviderID, Capability),
     Unset(String, ProviderID, Capability),
+    UnsuitableMode(String, ProviderID, String),
 }
 
 impl Error {
     fn incapable<T>(light: &Light, capability: Capability) -> Result<T> {
-        Err(Error::Incapable(String::from(light.get_name()),
-                             light.provider().clone(),
+        Err(Error::Incapable(String::from(light.name.clone()),
+                             light.provider.clone(),
                              capability))
     }
 
     fn unset<T>(light: &Light, capability: Capability) -> Result<T> {
-        Err(Error::Unset(String::from(light.get_name()),
-                         light.provider().clone(),
+        Err(Error::Unset(String::from(light.name.clone()),
+                         light.provider.clone(),
                          capability))
     }
+
+    fn unsuitable_mode<T>(light: &Light, wrong: String) -> Result<T> {
+        Err(Error::UnsuitableMode(String::from(light.name.clone()),
+                                  light.provider.clone(),
+                                  wrong))
+    }
+
 }
 
 impl std::fmt::Display for Error {
@@ -36,14 +45,18 @@ impl std::fmt::Display for Error {
                 write!(f, "Light \"{}\" ({}): value for \"{}\" unset",
                        name, provider, capability)
             },
+            Self::UnsuitableMode(name, provider, wrong) => {
+                write!(f, "Light \"{}\" ({}): attempt to set mode from another provider ({})",
+                       name, provider, wrong)
+            }
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProviderID {
-    name: String,
-    id: String,
+    pub name: String,
+    pub id: String,
 }
 
 impl ProviderID {
@@ -52,14 +65,6 @@ impl ProviderID {
             name,
             id,
         }
-    }
-
-    pub fn provider(self: &Self) -> &str {
-        &self.name
-    }
-
-    pub fn id(self: &Self) -> &str {
-        &self.id
     }
 }
 
@@ -76,10 +81,20 @@ pub enum Capability {
     Mode,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 enum State {
-    Color(Option<Box<dyn Color>>),
+    Color(Option<Color>),
     Brightness(Option<Brightness>),
     Mode(Option<Mode>),
+}
+
+fn cmp_capabilities(state: &State, capability: &Capability) -> bool {
+    match (state, capability) {
+        (State::Color(_), Capability::Color) => true,
+        (State::Brightness(_), Capability::Brightness) => true,
+        (State::Mode(_), Capability::Mode) => true,
+        _ => false,
+    }
 }
 
 impl From<&Capability> for State {
@@ -116,10 +131,11 @@ impl std::fmt::Display for Capability {
 
 pub type Brightness = f64;
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Light {
-    provider: ProviderID,
-    name: String,
-    power: bool,
+    pub provider: ProviderID,
+    pub name: String,
+    pub power: bool,
     state: Vec<State>,
 }
 
@@ -145,42 +161,13 @@ impl Light {
         }
     }
 
-    pub fn provider(self: &Self) -> &ProviderID {
-        &self.provider
-    }
-
-    pub fn get_name(self: &Self) -> &str {
-        &self.name
-    }
-
-    pub fn set_name(self: &mut Self, name: &str) {
-        self.name = String::from(name);
-    }
-
-    pub fn power(self: &Self) -> bool {
-        self.power
-    }
-
-    pub fn turn(self: &mut Self, state: bool) {
-        self.power = state;
-    }
-
-    fn cmp_capabilities(state: &State, capability: &Capability) -> bool {
-        match (state, capability) {
-            (State::Color(_), Capability::Color) => true,
-            (State::Brightness(_), Capability::Brightness) => true,
-            (State::Mode(_), Capability::Mode) => true,
-            _ => false,
-        }
-    }
-
     pub fn is_capable(self: &Self, checked: &[Capability]) -> bool {
         checked.iter().all(|c| {
-            self.state.iter().any(|item| Light::cmp_capabilities(item, c))
+            self.state.iter().any(|item| cmp_capabilities(item, c))
         })
     }
 
-    pub fn get_color(self: &Self) -> Result<&dyn Color> {
+    pub fn get_color(self: &Self) -> Result<&Color> {
         if let Some(State::Color(color)) = self.state.iter().find(|item| {
             match item {
                 State::Color(_) => true,
@@ -188,7 +175,7 @@ impl Light {
             }
         }) {
             if let Some(color) = color {
-                Ok(color.as_ref())
+                Ok(color)
             } else {
                 Error::unset(self, Capability::Color)
             }
@@ -197,7 +184,7 @@ impl Light {
         }
     }
 
-    pub fn set_color(self: &mut Self, color: Box<dyn Color>) -> Result<()> {
+    pub fn set_color(self: &mut Self, color: Color) -> Result<()> {
         if let Some(State::Color(in_color)) = self.state.iter_mut().find(|item| {
             match item {
                 State::Color(_) => true,
@@ -266,54 +253,15 @@ impl Light {
                 _ => false,
             }
         }) {
-            *in_mode = Some(mode);
-            Ok(())
+            if mode.provider == self.provider.name {
+                *in_mode = Some(mode);
+                Ok(())
+            } else {
+                Error::unsuitable_mode(self, mode.provider)
+            }
         } else {
             Error::incapable(self, Capability::Mode)
         }
-    }
-}
-
-impl Dumpable for ProviderID {
-    fn dump(self: &Self, dumper: &mut dyn Dumper) {
-        self.name.dump_as_parameter(dumper, "name");
-        self.id.dump_as_parameter(dumper, "id");
-    }
-
-    fn dump_as_parameter(self: &Self, dumper: &mut dyn Dumper, name: &str) {
-        dumper.dump_fold_as_parameter(name, self);
-    }
-}
-
-impl Dumpable for State {
-    fn dump(self: &Self, dumper: &mut dyn Dumper) {
-        match self {
-            State::Color(_) => "color",
-            State::Brightness(_) => "brightness",
-            State::Mode(_) => "mode",
-        }.dump_as_parameter(dumper, "type");
-
-        match self {
-            State::Color(color) => color as &dyn Dumpable,
-            State::Brightness(value) => value as &dyn Dumpable,
-            State::Mode(mode) => mode as &dyn Dumpable,
-        }.dump_as_parameter(dumper, "value");
-    }
-
-    fn dump_as_parameter(self: &Self, dumper: &mut dyn Dumper, name: &str) {
-        dumper.dump_fold_as_parameter(name, self);
-    }
-}
-
-impl Dumpable for Light {
-    fn dump(self: &Self, dumper: &mut dyn Dumper) {
-        self.provider.dump_as_parameter(dumper, "provider");
-        self.name.dump_as_parameter(dumper, "name");
-        self.state.dump_as_parameter(dumper, "state");
-    }
-
-    fn dump_as_parameter(self: &Self, dumper: &mut dyn Dumper, name: &str) {
-        dumper.dump_fold_as_parameter(name, self);
     }
 }
 

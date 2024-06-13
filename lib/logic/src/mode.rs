@@ -1,12 +1,14 @@
 
+use serde::{Serialize, Deserialize};
+
 pub mod parameter;
 
 use parameter::{Parameter, Value};
-use dump::{Dumpable, Dumper};
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Mode {
-    provider: String,
-    name: String,
+    pub provider: String,
+    pub name: String,
     parameters: Vec<Parameter>,
 }
 
@@ -27,16 +29,8 @@ impl Mode {
         }
     }
 
-    pub fn provider(self: &Self) -> &str {
-        self.provider.as_str()
-    }
-
-    pub fn name(self: &Self) -> &str {
-        self.name.as_str()
-    }
-
     pub fn parameter_names(self: &Self) -> impl Iterator<Item=&str> {
-        self.parameters.iter().map(|item| item.name())
+        self.parameters.iter().map(|item| item.name.as_str())
     }
 
     pub fn parameters(self: &Self) -> impl Iterator<Item=&Parameter> {
@@ -44,22 +38,10 @@ impl Mode {
     }
 
     pub fn parameter(self: &Self, name: &str) -> Option<&Value> {
-        match self.parameters.iter().find(|item| item.name() == name) {
-            Some(param) => Some(param.value()),
+        match self.parameters.iter().find(|item| item.name == name) {
+            Some(param) => Some(&param.value),
             _ => None
         }
-    }
-}
-
-impl Dumpable for Mode {
-    fn dump(self: &Self, dumper: &mut dyn Dumper) {
-        self.provider.dump_as_parameter(dumper, "provider");
-        self.name.dump_as_parameter(dumper, "name");
-        self.parameters.dump_as_parameter(dumper, "parameters");
-    }
-
-    fn dump_as_parameter(self: &Self, dumper: &mut dyn Dumper, name: &str) {
-        dumper.dump_fold_as_parameter(name, self);
     }
 }
 
@@ -72,7 +54,7 @@ mod tests {
         let mode = Mode::new_empty(String::from("provider"),
                                    String::from("name"));
 
-        assert_eq!(mode.name(), "name")
+        assert_eq!(mode.name, "name")
     }
 
     #[test]
@@ -80,7 +62,7 @@ mod tests {
         let mode = Mode::new_empty(String::from("provider"),
                                    String::from("name"));
 
-        assert_eq!(mode.provider(), "provider")
+        assert_eq!(mode.provider, "provider")
     }
 
     #[test]

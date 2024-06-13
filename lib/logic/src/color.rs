@@ -1,39 +1,26 @@
 
-use dump::{Dumper, Dumpable};
+use serde::{Serialize, Deserialize};
+
+use super::misc::Uf64;
 
 pub mod rgb;
 pub mod temperature;
+pub mod hsv;
 
-pub struct RGB {
-    pub red: u8,
-    pub green: u8,
-    pub blue: u8,
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Color { // Default color in XYZ space
+    pub x: Uf64,
+    pub y: Uf64,
+    pub z: Uf64,
 }
 
-pub struct HSV {
-    pub hue: f64,
-    pub saturation: f64,
-    pub value: f64,
-}
-
-pub type Temperature = f64;
-
-pub trait InnerColor {
-    fn to_rgb(self: &Self) -> Option<RGB>;
-    fn to_hsv(self: &Self) -> Option<HSV>;
-    fn to_temperature(self: &Self) -> Option<Temperature>;
-}
-
-pub trait Color: InnerColor + Dumpable {}
-impl<T> Color for T where T: InnerColor + Dumpable {}
-
-impl Dumpable for Box<dyn Color> {
-    fn dump(self: &Self, dumper: &mut dyn Dumper) {
-        self.as_ref().dump(dumper)
-    }
-
-    fn dump_as_parameter(self: &Self, dumper: &mut dyn Dumper, name: &str) {
-        self.as_ref().dump_as_parameter(dumper, name)
+impl Color {
+    fn new(x: f64, y: f64, z: f64) -> Self {
+        Self {
+            x: Uf64::new(x),
+            y: Uf64::new(y),
+            z: Uf64::new(z),
+        }
     }
 }
 
