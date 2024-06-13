@@ -3,55 +3,10 @@ use serde::{Serialize, Deserialize};
 
 use crate::color::Color;
 use crate::mode::Mode;
+use crate::brightness::Brightness;
+use crate::capabilities::Capability;
 
 type Result<T> = std::result::Result<T, Error>;
-
-#[derive(Debug)]
-pub enum Error {
-    Incapable(String, ProviderID, Capability),
-    Unset(String, ProviderID, Capability),
-    UnsuitableMode(String, ProviderID, String),
-}
-
-impl Error {
-    fn incapable<T>(light: &Light, capability: Capability) -> Result<T> {
-        Err(Error::Incapable(String::from(light.name.clone()),
-                             light.provider.clone(),
-                             capability))
-    }
-
-    fn unset<T>(light: &Light, capability: Capability) -> Result<T> {
-        Err(Error::Unset(String::from(light.name.clone()),
-                         light.provider.clone(),
-                         capability))
-    }
-
-    fn unsuitable_mode<T>(light: &Light, wrong: String) -> Result<T> {
-        Err(Error::UnsuitableMode(String::from(light.name.clone()),
-                                  light.provider.clone(),
-                                  wrong))
-    }
-
-}
-
-impl std::fmt::Display for Error {
-    fn fmt(self: &Self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            Self::Incapable(name, provider, capability) => {
-                write!(f, "Light \"{}\" ({}): incapable for \"{}\"",
-                       name, provider, capability)
-            },
-            Self::Unset(name, provider, capability) => {
-                write!(f, "Light \"{}\" ({}): value for \"{}\" unset",
-                       name, provider, capability)
-            },
-            Self::UnsuitableMode(name, provider, wrong) => {
-                write!(f, "Light \"{}\" ({}): attempt to set mode from another provider ({})",
-                       name, provider, wrong)
-            }
-        }
-    }
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProviderID {
@@ -74,13 +29,6 @@ impl std::fmt::Display for ProviderID {
     }
 }
 
-#[derive(Debug)]
-pub enum Capability {
-    Color,
-    Brightness,
-    Mode,
-}
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 enum State {
     Color(Option<Color>),
@@ -88,17 +36,19 @@ enum State {
     Mode(Option<Mode>),
 }
 
-fn cmp_capabilities(state: &State, capability: &Capability) -> bool {
-    match (state, capability) {
-        (State::Color(_), Capability::Color) => true,
-        (State::Brightness(_), Capability::Brightness) => true,
-        (State::Mode(_), Capability::Mode) => true,
-        _ => false,
+impl std::cmp::PartialEq<Capability> for State {
+    fn eq(self: &Self, other: &Capability) -> bool {
+        match (self, other) {
+            (State::Color(_), Capability::Color) => true,
+            (State::Brightness(_), Capability::Brightness) => true,
+            (State::Mode(_), Capability::Mode) => true,
+            _ => false,
+        }
     }
 }
 
-impl From<&Capability> for State {
-    fn from(value: &Capability) -> Self {
+impl From<Capability> for State {
+    fn from(value: Capability) -> Self {
         match value {
             Capability::Color => Self::Color(None),
             Capability::Brightness => Self::Brightness(None),
@@ -112,7 +62,7 @@ impl<'a> FromIterator<&'a Capability> for Vec<State> {
         let mut out = Self::new();
 
         for item in iter {
-            out.push(item.into());
+            out.push((*item).into());
         }
 
         out
@@ -128,8 +78,6 @@ impl std::fmt::Display for Capability {
         }
     }
 }
-
-pub type Brightness = f64;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Light {
@@ -163,7 +111,7 @@ impl Light {
 
     pub fn is_capable(self: &Self, checked: &[Capability]) -> bool {
         checked.iter().all(|c| {
-            self.state.iter().any(|item| cmp_capabilities(item, c))
+            self.state.iter().any(|item| item == c)
         })
     }
 
@@ -264,4 +212,52 @@ impl Light {
         }
     }
 }
+
+#[derive(Debug)]
+pub enum Error {
+    Incapable(String, ProviderID, Capability),
+    Unset(String, ProviderID, Capability),
+    UnsuitableMode(String, ProviderID, String),
+}
+
+impl Error {
+    fn incapable<T>(light: &Light, capability: Capability) -> Result<T> {
+        Err(Error::Incapable(String::from(light.name.clone()),
+                             light.provider.clone(),
+                             capability))
+    }
+
+    fn unset<T>(light: &Light, capability: Capability) -> Result<T> {
+        Err(Error::Unset(String::from(light.name.clone()),
+                         light.provider.clone(),
+                         capability))
+    }
+
+    fn unsuitable_mode<T>(light: &Light, wrong: String) -> Result<T> {
+        Err(Error::UnsuitableMode(String::from(light.name.clone()),
+                                  light.provider.clone(),
+                                  wrong))
+    }
+
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(self: &Self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Self::Incapable(name, provider, capability) => {
+                write!(f, "Light \"{}\" ({}): incapable for \"{}\"",
+                       name, provider, capability)
+            },
+            Self::Unset(name, provider, capability) => {
+                write!(f, "Light \"{}\" ({}): value for \"{}\" unset",
+                       name, provider, capability)
+            },
+            Self::UnsuitableMode(name, provider, wrong) => {
+                write!(f, "Light \"{}\" ({}): attempt to set mode from another provider ({})",
+                       name, provider, wrong)
+            }
+        }
+    }
+}
+
 
