@@ -3,17 +3,19 @@
 version = 3
 
 [[package]]
-name = "dump"
-version = "0.1.0"
-dependencies = [
- "serde_json",
-]
-
-[[package]]
 name = "itoa"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
+
+[[package]]
+name = "json_provider"
+version = "0.1.0"
+dependencies = [
+ "local_registry",
+ "logic",
+ "serde_json",
+]
 
 [[package]]
 name = "lighting"
@@ -27,7 +29,6 @@ dependencies = [
 name = "local_registry"
 version = "0.1.0"
 dependencies = [
- "dump",
  "logic",
  "serde_json",
 ]
@@ -37,13 +38,6 @@ name = "logic"
 version = "0.1.0"
 dependencies = [
  "serde",
- "serde_json",
-]
-
-[[package]]
-name = "mapper"
-version = "0.1.0"
-dependencies = [
  "serde_json",
 ]
 

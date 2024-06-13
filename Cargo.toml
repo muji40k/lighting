@@ -6,7 +6,13 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace]
-members = [ "lib/local_registry","lib/logic", "lib/provider"]
+members = [
+    "lib/local_registry",
+    "lib/logic",
+    "lib/provider",
+    "lib/local_registry/registries/json_provider/"
+]
+
 
 [dependencies]
 logic = { path = "lib/logic" }
