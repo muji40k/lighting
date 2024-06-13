@@ -1,7 +1,7 @@
 
 use logic::light::Light;
 
-pub type Result<'a, T> = std::result::Result<T, Error<'a>>;
+pub type Result<T> = std::result::Result<T, Error>;
 
 pub trait Registry {
     fn name(self: &Self) -> &str;
@@ -18,56 +18,56 @@ pub trait Registry {
 }
 
 #[derive(Debug)]
-pub struct Error<'a> {
-    pub registry: &'a str,
-    pub etype: ErrorType<'a>,
+pub struct Error {
+    pub registry: String,
+    pub etype: ErrorType,
 }
 
 #[derive(Debug)]
-pub enum ErrorType<'a> {
+pub enum ErrorType {
     NotFound(String),
-    IncorrectLight(&'a Light),
+    IncorrectLight(Light),
     Unnamed,
     Internal(Box<dyn std::error::Error>),
 }
 
-impl<'a> Error<'a> {
-    pub fn not_found<T>(registry: &'a str, name: &str) -> Result<'a, T> {
+impl Error {
+    pub fn not_found<T>(registry: &str, name: &str) -> Result<T> {
         Err(Self {
-            registry,
+            registry: registry.to_string(),
             etype: ErrorType::NotFound(name.to_string()),
         })
     }
 
-    pub fn incorrect_light<T>(registry: &'a str, light: &'a Light) -> Result<'a, T> {
+    pub fn incorrect_light<T>(registry: &str, light: &Light) -> Result<T> {
         Err(Self {
-            registry,
-            etype: ErrorType::IncorrectLight(light),
+            registry: registry.to_string(),
+            etype: ErrorType::IncorrectLight(light.clone()),
         })
     }
 
-    pub fn internal<T>(registry: &'a str, err: Box<dyn std::error::Error>) -> Result<'a, T> {
+    pub fn internal<T>(registry: &str, err: Box<dyn std::error::Error>) -> Result<T> {
         Err(Self {
-            registry,
+            registry: registry.to_string(),
             etype: ErrorType::Internal(err),
         })
     }
 
-    pub fn unnamed<T>(registry: &'a str) -> Result<'a, T> {
+    pub fn unnamed<T>(registry: &str) -> Result<T> {
         Err(Self {
-            registry,
+            registry: registry.to_string(),
             etype: ErrorType::Unnamed,
         })
     }
 }
 
-impl<'a> From<Error<'a>> for ErrorType<'a> {
-    fn from(value: Error<'a>) -> Self {
+impl From<Error> for ErrorType {
+    fn from(value: Error) -> Self {
         value.etype
     }
 }
 
-impl<'a> std::error::Error for Error<'a> {
+impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match &self.etype {
             ErrorType::Internal(err) => Some(err.as_ref()),
@@ -76,7 +76,7 @@ impl<'a> std::error::Error for Error<'a> {
     }
 }
 
-impl<'a> std::fmt::Display for ErrorType<'a> {
+impl std::fmt::Display for ErrorType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::NotFound(name) => {
@@ -95,7 +95,7 @@ impl<'a> std::fmt::Display for ErrorType<'a> {
     }
 }
 
-impl<'a> std::fmt::Display for Error<'a> {
+impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Registry \"{}\": {}", self.registry, self.etype)
     }

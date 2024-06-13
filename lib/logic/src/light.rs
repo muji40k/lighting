@@ -55,8 +55,8 @@ impl std::fmt::Display for Error {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProviderID {
-    pub name: String,
-    pub id: String,
+    pub name: String, // Provider name
+    pub id: String,   // Light id for provider
 }
 
 impl ProviderID {
@@ -81,7 +81,7 @@ pub enum Capability {
     Mode,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 enum State {
     Color(Option<Color>),
     Brightness(Option<Brightness>),
@@ -131,10 +131,10 @@ impl std::fmt::Display for Capability {
 
 pub type Brightness = f64;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Light {
-    pub provider: ProviderID,
-    pub name: String,
+    pub provider: ProviderID, // Light id for Provider
+    pub name: String,         // Local name
     pub power: bool,
     state: Vec<State>,
 }

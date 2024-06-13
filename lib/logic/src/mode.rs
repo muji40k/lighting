@@ -5,7 +5,7 @@ pub mod parameter;
 
 use parameter::{Parameter, Value};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Mode {
     pub provider: String,
     pub name: String,

@@ -18,14 +18,14 @@ macro_rules! assert_float_eq {
     };
 }
 
-pub trait FloatChecker: {
+pub trait FloatChecker: Clone {
     fn check(value: f64) -> (Option<f64>, f64);
 }
 
 pub type Nf64 = ConstraintedF64<Normalized>;
 pub type Uf64 = ConstraintedF64<Unsigned>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConstraintedF64<C: FloatChecker> (
     f64,
     PhantomData<C>,
@@ -81,7 +81,7 @@ where C: FloatChecker {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Normalized();
 impl FloatChecker for Normalized {
     fn check(value: f64) -> (Option<f64>, f64) {
@@ -95,7 +95,7 @@ impl FloatChecker for Normalized {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Unsigned();
 impl FloatChecker for Unsigned {
     fn check(value: f64) -> (Option<f64>, f64) {

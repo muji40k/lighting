@@ -7,7 +7,7 @@ pub mod rgb;
 pub mod temperature;
 pub mod hsv;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Color { // Default color in XYZ space
     pub x: Uf64,
     pub y: Uf64,
