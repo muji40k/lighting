@@ -8,13 +8,14 @@ edition = "2021"
 [workspace]
 members = [
     "lib/local_registry",
-    "lib/logic",
+    "lib/domain",
     "lib/provider",
-    "lib/local_registry/registries/json_provider/"
+    "lib/local_registry/registries/json_registry/"
 ]
 
 
 [dependencies]
-logic = { path = "lib/logic" }
+domain = { path = "lib/domain" }
 local_registry = { path = "lib/local_registry" }
+serde_json = "1.0.117"
 

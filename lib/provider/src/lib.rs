@@ -1,5 +1,5 @@
 
-use logic::light::Light;
+use domain::light::Light;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -47,14 +47,16 @@ impl Error {
         })
     }
 
-    pub fn incorrect_state<T>(provider: &str, light: &Light, msg: String) -> Result<T> {
+    pub fn incorrect_state<T>(provider: &str, light: &Light,
+                              msg: String) -> Result<T> {
         Err(Self {
             provider: provider.to_string(),
             etype: ErrorType::IncorrectState(light.clone(), msg),
         })
     }
 
-    pub fn internal<T>(provider: &str, err: Box<dyn std::error::Error>) -> Result<T> {
+    pub fn internal<T>(provider: &str,
+                       err: Box<dyn std::error::Error>) -> Result<T> {
         Err(Self {
             provider: provider.to_string(),
             etype: ErrorType::Internal(err),

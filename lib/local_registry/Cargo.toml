@@ -7,5 +7,5 @@ edition = "2021"
 
 [dependencies]
 serde_json = "1.0"
-logic = { path = "../logic" }
+domain = { path = "../domain" }
 

@@ -1,5 +1,5 @@
 
-use logic::light::Light;
+use domain::light::Light;
 
 pub type Result<T> = std::result::Result<T, Error>;
 

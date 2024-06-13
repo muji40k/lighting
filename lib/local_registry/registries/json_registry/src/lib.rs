@@ -2,7 +2,7 @@ use std::path::Path;
 use std::io::Write;
 use serde_json as json;
 
-use logic::light::Light;
+use domain::light::Light;
 use local_registry::{
     Registry,
     Error,
