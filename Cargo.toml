@@ -11,11 +11,12 @@ members = [
     "lib/domain",
     "lib/provider",
     "lib/local_registry/registries/json_registry/"
-]
+, "lib/logic"]
 
 
 [dependencies]
 domain = { path = "lib/domain" }
 local_registry = { path = "lib/local_registry" }
+logic = { version = "0.1.0", path = "lib/logic" }
 serde_json = "1.0.117"
 

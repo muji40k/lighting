@@ -11,10 +11,8 @@ pub trait Registry {
     fn load_dump(self: &Self, name: &str) -> Result<Light>;
     fn dump(self: &mut Self, light: &Light) -> Result<()>;
     fn default(self: &mut Self, light: &Light) -> Result<()>;
-    fn remove_dump(self: &mut Self, name: &str) -> Result<()>;
-    fn remove_default(self: &mut Self, name: &str) -> Result<()>;
-    fn rename_dump(self: &mut Self, old: &str, new: &str) -> Result<()>;
-    fn rename_default(self: &mut Self, old: &str, new: &str) -> Result<()>;
+    fn remove(self: &mut Self, name: &str) -> Result<()>;
+    fn rename(self: &mut Self, old: &str, new: &str) -> Result<()>;
 }
 
 #[derive(Debug)]

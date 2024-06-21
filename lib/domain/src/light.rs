@@ -15,7 +15,7 @@ pub struct ProviderID {
 }
 
 impl ProviderID {
-    fn new(name: String, id: String) -> Self {
+    pub fn new(name: String, id: String) -> Self {
         Self {
             name,
             id,

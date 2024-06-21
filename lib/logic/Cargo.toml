@@ -1,0 +1,9 @@
+[package]
+name = "logic"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+domain = { version = "0.1.0", path = "../domain" }
+local_registry = { version = "0.1.0", path = "../local_registry" }
+provider = { version = "0.1.0", path = "../provider" }
