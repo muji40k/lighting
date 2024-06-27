@@ -1,52 +1,10 @@
 
-use domain::light::{Light, ProviderID};
 use super::{Strategy, StrategyResult};
-use crate::facade::Managers;
 use crate::managers::{fetch, local};
 
-pub struct ListDefault(Option<local::Result<Vec<Light>>>);
-
-impl ListDefault {
-    pub fn new() -> Self {
-        Self(None)
-    }
-}
-
-impl Strategy for ListDefault {
-    fn execute(self: &mut Self, managers: Managers) {
-        self.0 = Some(managers.local.list_defaults())
-    }
-}
-
-impl StrategyResult for ListDefault {
-    type Result = local::Result<Vec<Light>>;
-
-    fn result(self: Self) -> Option<Self::Result> {
-        self.0
-    }
-}
-
-pub struct ListDumps(Option<local::Result<Vec<Light>>>);
-
-impl ListDumps {
-    pub fn new() -> Self {
-        Self(None)
-    }
-}
-
-impl Strategy for ListDumps {
-    fn execute(self: &mut Self, managers: Managers) {
-        self.0 = Some(managers.local.list_dumps())
-    }
-}
-
-impl StrategyResult for ListDumps {
-    type Result = local::Result<Vec<Light>>;
-
-    fn result(self: Self) -> Option<Self::Result> {
-        self.0
-    }
-}
+pub mod dump;
+pub mod load_and_save;
+pub mod manage;
 
 #[derive(Debug)]
 pub enum Error {

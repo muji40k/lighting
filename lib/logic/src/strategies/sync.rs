@@ -4,7 +4,7 @@ use super::{Strategy, StrategyResult};
 use crate::facade::Managers;
 use crate::managers::{fetch, local};
 
-pub struct General<'a>(&'a Light, Option<Result<(), fetch::Error>>);
+pub struct General<'a>(&'a Light, Option<Result<(), Error>>);
 
 impl<'a> General<'a> {
     pub fn new(light: &'a Light) -> Self {
@@ -14,12 +14,23 @@ impl<'a> General<'a> {
 
 impl<'a> Strategy for General<'a> {
     fn execute(self: &mut Self, managers: Managers) {
-        self.1 = Some(managers.sync.sync(self.0))
+        self.1 = Some(
+            managers.sync.sync(self.0)
+                .map_err(|err| Error::Fetch(err))
+                .and_then(|_| {
+                    if self.0.name.is_empty() {
+                        Ok(())
+                    } else {
+                        managers.local.save(&self.0)
+                            .map_err(|err| Error::Local(err))
+                    }
+                })
+        )
     }
 }
 
 impl<'a> StrategyResult for General<'a> {
-    type Result = Result<(), fetch::Error>;
+    type Result = Result<(), Error>;
 
     fn result(self: Self) -> Option<Self::Result> {
         self.1
@@ -32,7 +43,7 @@ pub mod fetch_and_sync {
     fn transform(
         id: &ProviderID,
         map: &mut dyn FnMut(&mut Light),
-        managers: &Managers
+        managers: &mut Managers
     ) -> Result<(), fetch::Error> {
         managers.fetch.fetch(id)
             .and_then(|mut light| {
@@ -53,7 +64,7 @@ pub mod fetch_and_sync {
         impl FnMut(
             &ProviderID,
             &mut dyn FnMut(&mut Light),
-            &Managers
+            &mut Managers
         ) -> Result<(), fetch::Error>
     > {
         misc::Single::new(
@@ -75,7 +86,7 @@ pub mod fetch_and_sync {
         impl FnMut(
             &ProviderID,
             &mut dyn FnMut(&mut Light),
-            &Managers
+            &mut Managers
         ) -> Result<(), fetch::Error>,
         impl Iterator<Item = &'a ProviderID> + Clone
     > {
@@ -93,32 +104,26 @@ pub mod load_and_sync {
     fn transform(
         name: &str,
         map: &mut dyn FnMut(&mut Light),
-        managers: &Managers
+        managers: &mut Managers
     ) -> Result<(), Error> {
         managers.local.load(name)
             .map_err(|err| Error::Local(err))
+            .map(|mut light| { map(&mut light); light })
             .and_then(|mut light| {
-                map(&mut light);
                 managers.sync.sync(&light)
                     .map_err(|err| Error::Fetch(err))
+                    .and_then(|_| {
+                        if light.name != name {
+                            light.name = name.to_string();
+                        }
+
+                        managers.local.save(&light)
+                            .map_err(|err| Error::Local(err))
+                    })
             })
     }
 
     pub type Single<'a, F, T> = misc::Single<'a, F, T, str, (), Error>;
-
-    // ########################################################################
-    // And why this doesn't work?
-    // ########################################################################
-    // pub fn _single<'a, F, T>(name: &'a str, map: F) -> Single<'a, F, T>
-    // where F: FnMut(&mut Light),
-    //       T: FnMut(&str, &mut dyn FnMut(&mut Light), &Managers) -> Result<(), Error> {
-    //     misc::Single::new(
-    //         transform,
-    //         map,
-    //         name
-    //     )
-    // }
-    // ########################################################################
 
     pub fn single<'a>(
         name: &'a str,
@@ -129,7 +134,7 @@ pub mod load_and_sync {
         impl FnMut(
             &str,
             &mut dyn FnMut(&mut Light),
-            &Managers
+            &mut Managers
         ) -> Result<(), Error>
     > {
         misc::Single::new(
@@ -151,7 +156,7 @@ pub mod load_and_sync {
         impl FnMut(
             &str,
             &mut dyn FnMut(&mut Light),
-            &Managers
+            &mut Managers
         ) -> Result<(), Error>,
         impl Iterator<Item = &'a str> + Clone
     > {
@@ -169,14 +174,22 @@ pub mod default_and_sync {
     fn transform(
         name: &str,
         map: &mut dyn FnMut(&mut Light),
-        managers: &Managers
+        managers: &mut Managers
     ) -> Result<(), Error> {
         managers.local.get_default(name)
             .map_err(|err| Error::Local(err))
+            .map(|mut light| { map(&mut light); light })
             .and_then(|mut light| {
-                map(&mut light);
                 managers.sync.sync(&light)
                     .map_err(|err| Error::Fetch(err))
+                    .and_then(|_| {
+                        if light.name != name {
+                            light.name = name.to_string();
+                        }
+
+                        managers.local.save(&light)
+                            .map_err(|err| Error::Local(err))
+                    })
             })
     }
 
@@ -191,7 +204,7 @@ pub mod default_and_sync {
         impl FnMut(
             &str,
             &mut dyn FnMut(&mut Light),
-            &Managers
+            &mut Managers
         ) -> Result<(), Error>
     > {
         misc::Single::new(
@@ -213,7 +226,7 @@ pub mod default_and_sync {
         impl FnMut(
             &str,
             &mut dyn FnMut(&mut Light),
-            &Managers
+            &mut Managers
         ) -> Result<(), Error>,
         impl Iterator<Item = &'a str> + Clone
     > {
@@ -230,7 +243,7 @@ mod misc {
 
     pub struct Single<'a, F, T, ID, R, E>
     where F: FnMut(&mut Light),
-          T: FnMut(&ID, &mut dyn FnMut(&mut Light), &Managers) -> Result<R, E>,
+          T: FnMut(&ID, &mut dyn FnMut(&mut Light), &mut Managers) -> Result<R, E>,
           ID: ?Sized,
           E: std::error::Error {
         transformer: T,
@@ -241,7 +254,7 @@ mod misc {
 
     pub struct Multiple<'a, F, T, ID, I, R, E>
     where F: FnMut(&mut Light),
-          T: FnMut(&ID, &mut dyn FnMut(&mut Light), &Managers) -> Result<R, E>,
+          T: FnMut(&ID, &mut dyn FnMut(&mut Light), &mut Managers) -> Result<R, E>,
           I: Iterator<Item = &'a ID> + Clone,
           ID: ?Sized + 'a,
           R: Default,
@@ -254,7 +267,7 @@ mod misc {
 
     impl<'a, F, T, ID, R, E> Single<'a, F, T, ID, R, E>
     where F: FnMut(&mut Light),
-          T: FnMut(&ID, &mut dyn FnMut(&mut Light), &Managers) -> Result<R, E>,
+          T: FnMut(&ID, &mut dyn FnMut(&mut Light), &mut Managers) -> Result<R, E>,
           ID: ?Sized,
           E: std::error::Error {
         pub fn new(transformer: T, map: F, id: &'a ID) -> Self {
@@ -269,7 +282,7 @@ mod misc {
 
     impl<'a, F, T, ID, I, R, E> Multiple<'a, F, T, ID, I, R, E>
     where F: FnMut(&mut Light),
-          T: FnMut(&ID, &mut dyn FnMut(&mut Light), &Managers) -> Result<R, E>,
+          T: FnMut(&ID, &mut dyn FnMut(&mut Light), &mut Managers) -> Result<R, E>,
           I: Iterator<Item = &'a ID> + Clone,
           ID: ?Sized + 'a,
           R: Default,
@@ -286,19 +299,19 @@ mod misc {
 
     impl<'a, F, T, ID, R, E> Strategy for Single<'a, F, T, ID, R, E>
     where F: FnMut(&mut Light),
-          T: FnMut(&ID, &mut dyn FnMut(&mut Light), &Managers) -> Result<R, E>,
+          T: FnMut(&ID, &mut dyn FnMut(&mut Light), &mut Managers) -> Result<R, E>,
           ID: ?Sized,
           E: std::error::Error {
-        fn execute(self: &mut Self, managers: Managers) {
+        fn execute(self: &mut Self, mut managers: Managers) {
             self.result = Some(
-                (self.transformer)(self.id, &mut self.map, &managers)
+                (self.transformer)(self.id, &mut self.map, &mut managers)
             )
         }
     }
 
     impl<'a, F, T, ID, R, E> StrategyResult for Single<'a, F, T, ID, R, E>
     where F: FnMut(&mut Light),
-          T: FnMut(&ID, &mut dyn FnMut(&mut Light), &Managers) -> Result<R, E>,
+          T: FnMut(&ID, &mut dyn FnMut(&mut Light), &mut Managers) -> Result<R, E>,
           ID: ?Sized,
           E: std::error::Error {
         type Result = Result<R, E>;
@@ -310,18 +323,18 @@ mod misc {
 
     impl<'a, F, T, ID, I, R, E> Strategy for Multiple<'a, F, T, ID, I, R, E>
     where F: FnMut(&mut Light),
-          T: FnMut(&ID, &mut dyn FnMut(&mut Light), &Managers) -> Result<R, E>,
+          T: FnMut(&ID, &mut dyn FnMut(&mut Light), &mut Managers) -> Result<R, E>,
           I: Iterator<Item = &'a ID> + Clone,
           ID: ?Sized + 'a,
           R: Default,
           E: std::error::Error {
-        fn execute(self: &mut Self, managers: Managers) {
+        fn execute(self: &mut Self, mut managers: Managers) {
             self.result = Some({
                 let mut clone = self.ids.clone();
                 let mut res = Ok(R::default());
 
                 while let (Ok(_), Some(id)) = (&res, clone.next()) {
-                    res = (self.transformer)(id, &mut self.map, &managers);
+                    res = (self.transformer)(id, &mut self.map, &mut managers);
                 }
 
                 res
@@ -331,7 +344,7 @@ mod misc {
 
     impl<'a, F, T, ID, I, R, E> StrategyResult for Multiple<'a, F, T, ID, I, R, E>
     where F: FnMut(&mut Light),
-          T: FnMut(&ID, &mut dyn FnMut(&mut Light), &Managers) -> Result<R, E>,
+          T: FnMut(&ID, &mut dyn FnMut(&mut Light), &mut Managers) -> Result<R, E>,
           I: Iterator<Item = &'a ID> + Clone,
           ID: ?Sized + 'a,
           R: Default,
